@@ -16,51 +16,28 @@ def resize(img,scale_percent):
 
 leftImg = cv2.imread('images/left_small.png');
 rightImg = cv2.imread('images/right_small.png');
+leftMiddleImg = cv2.imread('images/left_center_tip.png');
+rightMiddleImg = cv2.imread('images/right_center_tip.png');
 
 resize(leftImg,50)
 resize(rightImg,50)
+resize(leftMiddleImg,50)
+resize(rightMiddleImg,50)
 
 start_time = timeit.default_timer()
 
 def checkNormalHit():
-    pass
-    
-
-while(True):
-    # start_time = timeit.default_timer()
     printscreen_pil =  ImageGrab.grab(bbox=(600, 700, 1320, 800))
-    # elapsed = timeit.default_timer() - start_time
-    # print("screenshot - ",elapsed)
-    # start_time = timeit.default_timer()
     printscreen_numpy =   np.array(printscreen_pil,dtype='uint8').reshape((printscreen_pil.size[1],printscreen_pil.size[0],3)) 
-    # elapsed = timeit.default_timer() - start_time
-    # print("numpy - ",elapsed)
-    # start_time = timeit.default_timer()
     im_bgr = cv2.cvtColor(printscreen_numpy, cv2.COLOR_RGB2BGR)
-    # im_bgr = resize(im_bgr,50)
-    # elapsed = timeit.default_timer() - start_time
-    # print("bgr conversion - ",elapsed)
-    # start_time = timeit.default_timer()
-
-    # im_bgr = cv2.resize(im_bgr,(1280,720), interpolation = cv2.INTER_AREA)
     # left
     result = cv2.matchTemplate(im_bgr,leftImg,cv2.TM_CCOEFF_NORMED)
-    # elapsed = timeit.default_timer() - start_time
-    # print("match template - ",elapsed)
-    # start_time = timeit.default_timer()
-
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-    # elapsed = timeit.default_timer() - start_time
-    # print("minmaxloc - ",elapsed)
-
     w = leftImg.shape[1]
     h = leftImg.shape[0]
     if max_val > decisionThreshold:
-        # print("left",str(max_val))
         pyautogui.press('left')
-        # cv2.rectangle(im_bgr,max_loc,(max_loc[0]+w,max_loc[1]+h),(0,255,255),2)
-        continue
-
+        return True
     # right
     result = cv2.matchTemplate(im_bgr,rightImg,cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
@@ -68,14 +45,45 @@ while(True):
     w = rightImg.shape[1]
     h = rightImg.shape[0]
     if max_val > decisionThreshold:
-        # print("right",str(max_val))
         pyautogui.press('right')
-        # cv2.rectangle(im_bgr,max_loc,(max_loc[0]+w,max_loc[1]+h),(0,255,255),2)
-        continue
-
+        return True
     # cv2.putText(im_bgr,str(max_val),(30,30),cv2.FONT_HERSHEY_SIMPLEX,1.5,(0,0,255),2,cv2.LINE_AA)
 
     # cv2.imshow('window',im_bgr)
     # if cv2.waitKey(20) & 0xFF == ord('q'):
     #     cv2.destroyAllWindows()
     #     break
+    return False
+    
+def checkMiddleHit():
+    printscreen_pil =  ImageGrab.grab(bbox=(800, 170, 1050, 480))
+    printscreen_numpy =   np.array(printscreen_pil,dtype='uint8').reshape((printscreen_pil.size[1],printscreen_pil.size[0],3)) 
+    im_bgr = cv2.cvtColor(printscreen_numpy, cv2.COLOR_RGB2BGR)
+    resize(im_bgr,50)
+    # left
+    result = cv2.matchTemplate(im_bgr,leftMiddleImg,cv2.TM_CCOEFF_NORMED)
+    min_val_left, max_val_left, min_loc_left, max_loc_left = cv2.minMaxLoc(result)
+
+    # right
+    result = cv2.matchTemplate(im_bgr,rightMiddleImg,cv2.TM_CCOEFF_NORMED)
+    min_val_right, max_val_right, min_loc_right, max_loc_right = cv2.minMaxLoc(result)
+
+    if max_val_right > decisionThreshold and max_val_left > decisionThreshold:
+        pyautogui.press('left' if max_loc_left[1] > max_loc_right[1] else 'right')
+        return True
+    if max_val_left > decisionThreshold:
+        pyautogui.press('left')
+        return True
+    if max_val_right > decisionThreshold:
+        pyautogui.press('right')
+        return True
+    # cv2.putText(im_bgr,str(max_val),(30,30),cv2.FONT_HERSHEY_SIMPLEX,1.5,(0,0,255),2,cv2.LINE_AA)
+
+    # cv2.imshow('window',im_bgr)
+    # if cv2.waitKey(20) & 0xFF == ord('q'):
+    #     cv2.destroyAllWindows()
+    return False
+
+while(True):
+    if checkNormalHit(): continue
+    if checkMiddleHit(): continue
