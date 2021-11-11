@@ -1,12 +1,13 @@
-import sys
 import pyautogui
 import cv2 #pip install opencv-contrib-python
 import numpy as np
 from time import sleep
-from PIL import ImageGrab
+from mss import mss
 import timeit
+from PIL import Image
 
 decisionThreshold = .8
+decisionThresholdCenter = .6
 
 def resize(img,scale_percent):
     width = int(img.shape[1] * scale_percent / 100)
@@ -27,9 +28,10 @@ resize(rightMiddleImg,50)
 start_time = timeit.default_timer()
 
 def checkNormalHit():
-    printscreen_pil =  ImageGrab.grab(bbox=(600, 700, 1320, 800))
-    printscreen_numpy =   np.array(printscreen_pil,dtype='uint8').reshape((printscreen_pil.size[1],printscreen_pil.size[0],3)) 
-    im_bgr = cv2.cvtColor(printscreen_numpy, cv2.COLOR_RGB2BGR)
+    sct = mss()
+    im_bgr = np.array(sct.grab(monitor = {'top': 720, 'left': 600, 'width': 750, 'height': 200}))
+    im_bgr = np.flip(im_bgr[:, :, :3], 2)  # 1
+    im_bgr = cv2.cvtColor(im_bgr, cv2.COLOR_RGB2BGR)  # 2
     # left
     result = cv2.matchTemplate(im_bgr,leftImg,cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
@@ -47,18 +49,14 @@ def checkNormalHit():
     if max_val > decisionThreshold:
         pyautogui.press('right')
         return True
-    # cv2.putText(im_bgr,str(max_val),(30,30),cv2.FONT_HERSHEY_SIMPLEX,1.5,(0,0,255),2,cv2.LINE_AA)
-
-    # cv2.imshow('window',im_bgr)
-    # if cv2.waitKey(20) & 0xFF == ord('q'):
-    #     cv2.destroyAllWindows()
-    #     break
     return False
     
 def checkMiddleHit():
-    printscreen_pil =  ImageGrab.grab(bbox=(800, 170, 1050, 480))
-    printscreen_numpy =   np.array(printscreen_pil,dtype='uint8').reshape((printscreen_pil.size[1],printscreen_pil.size[0],3)) 
-    im_bgr = cv2.cvtColor(printscreen_numpy, cv2.COLOR_RGB2BGR)
+    sct = mss()
+    im_bgr = np.array(sct.grab(monitor = {'top': 170, 'left': 800, 'width': 250, 'height': 310}))
+    im_bgr = np.flip(im_bgr[:, :, :3], 2)  # 1
+    im_bgr = cv2.cvtColor(im_bgr, cv2.COLOR_RGB2BGR)  # 2
+
     resize(im_bgr,50)
     # left
     result = cv2.matchTemplate(im_bgr,leftMiddleImg,cv2.TM_CCOEFF_NORMED)
@@ -68,17 +66,15 @@ def checkMiddleHit():
     result = cv2.matchTemplate(im_bgr,rightMiddleImg,cv2.TM_CCOEFF_NORMED)
     min_val_right, max_val_right, min_loc_right, max_loc_right = cv2.minMaxLoc(result)
 
-    if max_val_right > decisionThreshold and max_val_left > decisionThreshold:
+    if max_val_right > decisionThresholdCenter and max_val_left > decisionThresholdCenter:
         pyautogui.press('left' if max_loc_left[1] > max_loc_right[1] else 'right')
         return True
-    if max_val_left > decisionThreshold:
+    if max_val_left > decisionThresholdCenter:
         pyautogui.press('left')
         return True
-    if max_val_right > decisionThreshold:
+    if max_val_right > decisionThresholdCenter:
         pyautogui.press('right')
         return True
-    # cv2.putText(im_bgr,str(max_val),(30,30),cv2.FONT_HERSHEY_SIMPLEX,1.5,(0,0,255),2,cv2.LINE_AA)
-
     # cv2.imshow('window',im_bgr)
     # if cv2.waitKey(20) & 0xFF == ord('q'):
     #     cv2.destroyAllWindows()
