@@ -1,0 +1,10 @@
+Team members : 
+Ungureanu Mihai-Laurentiu
+Turcut Stefan-Adrian
+Petean Darius-Flaviu
+
+Project's name : 
+Age classification based on facial images
+
+Github project link : 
+https://github.com/ExplodingInsanity/cvdl-project/tree/master

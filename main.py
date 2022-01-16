@@ -1,101 +1,61 @@
-from os import sep
-import pyautogui
-import cv2 #pip install opencv-contrib-python
-import numpy as np
-from time import sleep
-from mss import mss
-import timeit
-from PIL import Image
+import cv2
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+import tensorflow as tf
+from tensorflow.keras import layers
 
-decisionThreshold = .8
-decisionThresholdCenter = .8
+img_dir = './train/kagle_dataset'
+train_data = tf.keras.preprocessing.image_dataset_from_directory(img_dir,                                                                  
+    label_mode = "categorical",
+    image_size = (224,224),
+    batch_size= 32,
+    seed = 42,
+    validation_split = 0.25,
+    subset = "training"
+)
+test_data = tf.keras.preprocessing.image_dataset_from_directory(img_dir,
+    label_mode = "categorical",
+    image_size = (224,224),
+    batch_size = 32,
+    seed = 42,
+    validation_split = 0.25,
+    subset = "validation"
+)
 
-def resize(img,scale_percent):
-    width = int(img.shape[1] * scale_percent / 100)
-    height = int(img.shape[0] * scale_percent / 100)
-    dim = (width, height)
-    return cv2.resize(img, dim)
+model = tf.keras.Sequential([
+    layers.Conv2D(filters = 20, kernel_size = 2,input_shape= (224,224,3),padding="same",activation= "relu"),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D(pool_size= 2),
+    layers.Conv2D(filters = 20, kernel_size = 2, padding= "same",activation= "relu"),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D(pool_size= 2),
+    layers.Conv2D(filters = 20, kernel_size= 2, padding = "same",activation= "relu"),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D(pool_size = 2),
+    layers.Conv2D(filters = 20, kernel_size= 2, padding = "same",activation= "relu"),
+    layers.Flatten(),
+    layers.Dense(1024, activation = "relu"),                        
+    layers.Dropout(0.3),
+    layers.Dense(1024, activation = "relu"),                          
+    layers.Dropout(0.3),
+    layers.Dense(1024, activation = "relu"),
+    layers.Dense(53, activation= "softmax")
+])
 
-leftImg = cv2.imread('images/left_small.png');
-rightImg = cv2.imread('images/right_small.png');
-rightImgBig = cv2.imread('images/right_small.png');
-leftImgBig = cv2.imread('images/left_small.png');
-leftMiddleImg = cv2.imread('images/left_center_tip2.png');
-rightMiddleImg = cv2.imread('images/right_center_small.png');
+model.compile(
+    loss = tf.keras.losses.categorical_crossentropy,
+    optimizer = tf.keras.optimizers.Adam(learning_rate= 0.0001),
+    metrics = ["accuracy"]
+)
 
-leftImg = cv2.cvtColor(leftImg,cv2.COLOR_RGB2GRAY)
-rightImg = cv2.cvtColor(rightImg,cv2.COLOR_RGB2GRAY)
-leftImgBig = cv2.cvtColor(leftImgBig,cv2.COLOR_RGB2GRAY)
-rightImgBig = cv2.cvtColor(rightImgBig,cv2.COLOR_RGB2GRAY)
-leftMiddleImg = cv2.cvtColor(leftMiddleImg,cv2.COLOR_RGB2GRAY)
-rightMiddleImg = cv2.cvtColor(rightMiddleImg,cv2.COLOR_RGB2GRAY)
+model_checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath='./results/second_run_64_64.h5', verbose=1, save_weights_only=False, save_freq='epoch')
 
-rightImgBig = resize(rightImgBig,145)
-leftImgBig = resize(leftImgBig,145)
-# resize(rightMiddleImg,50)
-
-def checkNormalHit():
-    sct = mss()
-    im_bgr = np.array(sct.grab(monitor = {'top': 720, 'left': 400, 'width': 1100, 'height': 300}))
-    im_bgr = np.flip(im_bgr[:, :, :3], 2)  # 1
-    im_bgr = cv2.cvtColor(im_bgr, cv2.COLOR_RGB2GRAY)  # 2
-
-    # left
-    result = cv2.matchTemplate(im_bgr,leftImg,cv2.TM_CCOEFF_NORMED)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-    if max_val > decisionThreshold:
-        pyautogui.press('left')
-        return True
-    # right
-    result = cv2.matchTemplate(im_bgr,rightImg,cv2.TM_CCOEFF_NORMED)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-
-    if max_val > decisionThreshold:
-        pyautogui.press('right')
-        return True
-    result = cv2.matchTemplate(im_bgr,rightImgBig,cv2.TM_CCOEFF_NORMED)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-    if max_val > decisionThreshold:
-        pyautogui.press('right')
-        return True
-    result = cv2.matchTemplate(im_bgr,leftImgBig,cv2.TM_CCOEFF_NORMED)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-
-    if max_val > decisionThreshold:
-        pyautogui.press('left')
-        # print("right struggle")
-        return True
-
-    return False
-    
-def checkMiddleHit():
-    sct = mss()
-    im_bgr = np.array(sct.grab(monitor = {'top': 170, 'left': 750, 'width': 760, 'height': 310}))
-    im_bgr = np.flip(im_bgr[:, :, :3], 2)  # 1
-    im_bgr = cv2.cvtColor(im_bgr, cv2.COLOR_RGB2GRAY)  # 2
-
-    # left
-    result = cv2.matchTemplate(im_bgr,leftMiddleImg,cv2.TM_CCOEFF_NORMED)
-    min_val_left, max_val_left, min_loc_left, max_loc_left = cv2.minMaxLoc(result)
-
-    # right
-    result = cv2.matchTemplate(im_bgr,rightMiddleImg,cv2.TM_CCOEFF_NORMED)
-    min_val_right, max_val_right, min_loc_right, max_loc_right = cv2.minMaxLoc(result)
-
-    if max_val_right > decisionThresholdCenter and max_val_left > decisionThresholdCenter:
-        pyautogui.press('left' if max_loc_left[1] > max_loc_right[1] else 'right')
-        return True
-    if max_val_left > decisionThresholdCenter:
-        pyautogui.press('left')
-        return True
-    if max_val_right > decisionThresholdCenter:
-        pyautogui.press('right')
-        return True
-    # cv2.imshow('window',im_bgr)
-    # if cv2.waitKey(20) & 0xFF == ord('q'):
-    #     cv2.destroyAllWindows()
-    return False
-
-while(True):
-    if checkNormalHit(): continue
-    if checkMiddleHit(): continue
+model.fit(
+    train_data,
+    steps_per_epoch = len(train_data),      
+    epochs = 200,
+    validation_data = test_data,
+    validation_steps = len(test_data),
+    callbacks = [model_checkpoint]    
+)
