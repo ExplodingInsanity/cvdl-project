@@ -1,6 +1,4 @@
 # cvdl-project
-Select branch darius
-
 <h1>Age classification based on images</h1>
 For this task we will attempt multiple ways to try and find the best solution for this problem
 
